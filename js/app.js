@@ -5,45 +5,57 @@ const numberOfRows = 6;
 const numberOfColumns = 5;
 const fieldWidth = numberOfColumns * tileWidth;
 const fieldHeight = numberOfRows * tileHeight;
-const fieldGap = 100;
+const fieldBottomGap = 100;
+const emenyRowsModifier = 0.66;
 
-const firstEnemyRow = Math.round(tileHeight * 0.66);
-const secondEnemyRow = Math.round(tileHeight + tileHeight * 0.66);
-const thirdEnemyRow = Math.round(tileHeight * 2 + tileHeight * 0.66);
+const firstEnemyRow = Math.round(tileHeight * emenyRowsModifier);
+const secondEnemyRow = Math.round(tileHeight + tileHeight * emenyRowsModifier);
+const thirdEnemyRow = Math.round(tileHeight * 2 + tileHeight * emenyRowsModifier);
+
+const entityWidth = 80;
+const entityHeight = 70;
 
 const playerStartingPositionX = tileWidth * 2; 
-const playerStartingPositionY = fieldHeight - fieldGap;
+const playerStartingPositionY = fieldHeight - fieldBottomGap;
 
 
-const Entity = function () {
-  this.width = 80;
-  this.height = 70;
+const ScoreBoard = function(score, scoreMax) {
+  this.score = score;
+  this.scoreMax = scoreMax;
 }
 
-const Player = function (xAxisPosition, yAxisPosition, width, height) {
-  Entity.call(this, width, height)
-  this.xAxisPosition = xAxisPosition;
-  this.yAxisPosition = yAxisPosition;
-  this.moveXAxis = tileWidth;
-  this.moveYAxis = tileHeight;
-  this.sprite = "images/char-boy.png";
-  this.score = 0;
-  this.scoreMax = 0;
-};
-
-Player.prototype.update = function () {
-  if (player.yAxisPosition < 0) {
-    player.respawn();
-    player.win();
-  }
-};
-
-Player.prototype.win = function () {
+ScoreBoard.prototype.update = function () {
   scoreTitle.textContent = `Current score is: ${(this.score += 1)}`;
 
   if (this.score > this.scoreMax) {
     this.scoreMax = this.score;
     maxScoreTitle.textContent = `Your max score is: ${this.scoreMax}`;
+  }
+};
+
+const scoreBoard = new ScoreBoard(0, 0);
+
+
+const Entity = function (xAxisPosition, yAxisPosition, sprite) {
+  this.xAxisPosition = xAxisPosition;
+  this.yAxisPosition = yAxisPosition;
+  this.width = entityWidth;
+  this.height = entityHeight;
+  this.sprite = sprite;
+}
+
+const Player = function (xAxisPosition, yAxisPosition, sprite, width, height) {
+  Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height)
+  this.moveXAxis = tileWidth;
+  this.moveYAxis = tileHeight;
+};
+
+Player.prototype = Object.create(Entity.prototype);
+
+Player.prototype.update = function () {
+  if (player.yAxisPosition < 0) {
+    this.respawn();
+    scoreBoard.update();
   }
 };
 
@@ -66,41 +78,37 @@ Player.prototype.handleInput = function (key) {
       this.yAxisPosition -= this.moveYAxis;
       break;
     case "down":
-      this.yAxisPosition += this.moveYAxis;
-      if (this.yAxisPosition >= (fieldHeight - fieldGap)) {
-        this.yAxisPosition = fieldHeight - fieldGap;
+      if (this.yAxisPosition + this.moveYAxis <= fieldHeight - fieldBottomGap) {
+        this.yAxisPosition += this.moveYAxis;
       }
       break;
     case "left":
-      this.xAxisPosition -= this.moveXAxis;
-      if (this.xAxisPosition < 0) {
-        this.xAxisPosition = 0;
+      if (this.xAxisPosition - this.moveXAxis >= 0) {
+        this.xAxisPosition -= this.moveXAxis;
       }
       break;
     case "right":
-      this.xAxisPosition += this.moveXAxis;
-      if (this.xAxisPosition >= fieldWidth) {
-        this.xAxisPosition = fieldWidth - fieldGap;
+      if (this.xAxisPosition + this.moveXAxis < fieldWidth) {
+        this.xAxisPosition += this.moveXAxis;
       }
       break;
   }
 };
 
-const player = new Player(playerStartingPositionX, playerStartingPositionY);
+const player = new Player(playerStartingPositionX, playerStartingPositionY, "images/char-boy.png");
 
-const Enemy = function (yAxisPosition, moveSpeed, width, height, player) {
-  Entity.call(this, width, height)
-  this.xAxisPosition = -this.width;
-  this.yAxisPosition = yAxisPosition;
+const Enemy = function (xAxisPosition, yAxisPosition, sprite, moveSpeed, width, height, player) {
+  Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height)
   this.moveSpeed = moveSpeed;
-  this.sprite = "images/enemy-bug.png";
   this.player = player;
 };
+
+Enemy.prototype = Object.create(Entity.prototype);
 
 Enemy.prototype.update = function (dt) {
   this.xAxisPosition += this.moveSpeed * dt;
 
-  if (this.xAxisPosition >= ctx.canvas.width) {
+  if (this.xAxisPosition >= fieldWidth) {
     this.xAxisPosition = -this.width;
   }
 
@@ -125,8 +133,8 @@ Enemy.prototype.checkCollision = function () {
   ) {
     
     player.respawn();
-    player.score = 0;
-    scoreTitle.textContent = `Current score is: ${player.score}`;
+    scoreBoard.score = 0;
+    scoreTitle.textContent = `Current score is: ${scoreBoard.score}`;
   }
 };
 
@@ -148,7 +156,7 @@ const enemyStats = [
 
 const allEnemies = enemyStats.map(
   ({ yAxisPosition, moveSpeed }) =>
-    new Enemy(yAxisPosition, moveSpeed)
+    new Enemy(-entityWidth, yAxisPosition, "images/enemy-bug.png", moveSpeed)
 );
 
 document.addEventListener("keyup", function (e) {
@@ -166,8 +174,8 @@ const scoreWrapper = document.createElement("div");
 scoreWrapper.classList.add("score__wrapper");
 const scoreTitle = document.createElement("span");
 const maxScoreTitle = document.createElement("span");
-maxScoreTitle.textContent = `Your max score is: ${player.scoreMax}`;
-scoreTitle.textContent = `Current score is: ${player.score}`;
+maxScoreTitle.textContent = `Your max score is: ${scoreBoard.scoreMax}`;
+scoreTitle.textContent = `Current score is: ${scoreBoard.score}`;
 
 scoreWrapper.append(scoreTitle);
 scoreWrapper.append(maxScoreTitle);
