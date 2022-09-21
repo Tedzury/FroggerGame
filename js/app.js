@@ -1,26 +1,24 @@
-
-const tileWidth = 100;
+const tileWidth = 101;
 const tileHeight = 83;
 const numberOfRows = 6;
 const numberOfColumns = 5;
 const fieldWidth = numberOfColumns * tileWidth;
 const fieldHeight = numberOfRows * tileHeight;
 const fieldBottomGap = 100;
-const emenyRowsModifier = 0.75;   
+const emenyRowsOffset = 19;
 const baseEnemySpeed = 180;
-const enemySpeedModifier = 1/6;
+const enemySpeedModifier = 1 / 6;
 
 const entityWidth = 80;
 const entityHeight = 70;
 
-const playerStartingPositionX = tileWidth * 2; 
+const playerStartingPositionX = tileWidth * 2;
 const playerStartingPositionY = fieldHeight - fieldBottomGap;
 
-
-const ScoreBoard = function(score, scoreMax) {
+const ScoreBoard = function (score, scoreMax) {
   this.score = score;
   this.scoreMax = scoreMax;
-}
+};
 
 ScoreBoard.prototype.updateOnWin = function () {
   scoreTitle.textContent = `Current score is: ${(this.score += 1)}`;
@@ -31,13 +29,12 @@ ScoreBoard.prototype.updateOnWin = function () {
   }
 };
 
-ScoreBoard.prototype.updateOnLoose = function() {
+ScoreBoard.prototype.updateOnLoose = function () {
   this.score = 0;
   scoreTitle.textContent = `Current score is: ${scoreBoard.score}`;
-}
+};
 
 const scoreBoard = new ScoreBoard(0, 0);
-
 
 const Entity = function (xAxisPosition, yAxisPosition, sprite) {
   this.xAxisPosition = xAxisPosition;
@@ -45,10 +42,17 @@ const Entity = function (xAxisPosition, yAxisPosition, sprite) {
   this.width = entityWidth;
   this.height = entityHeight;
   this.sprite = sprite;
-}
+};
 
-const Player = function (xAxisPosition, yAxisPosition, sprite, scoreBoard, width, height) {
-  Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height)
+const Player = function (
+  xAxisPosition,
+  yAxisPosition,
+  sprite,
+  scoreBoard,
+  width,
+  height
+) {
+  Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height);
   this.moveXAxis = tileWidth;
   this.moveYAxis = tileHeight;
   this.scoreTable = scoreBoard;
@@ -79,7 +83,7 @@ Player.prototype.respawn = function () {
 Player.prototype.loose = function () {
   this.respawn();
   this.scoreTable.updateOnLoose();
-}
+};
 
 Player.prototype.handleInput = function (key) {
   switch (key) {
@@ -104,10 +108,23 @@ Player.prototype.handleInput = function (key) {
   }
 };
 
-const player = new Player(playerStartingPositionX, playerStartingPositionY, "images/char-boy.png", scoreBoard);
+const player = new Player(
+  playerStartingPositionX,
+  playerStartingPositionY,
+  "images/char-boy.png",
+  scoreBoard
+);
 
-const Enemy = function (xAxisPosition, yAxisPosition, sprite, moveSpeed, player, width, height ) {
-  Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height)
+const Enemy = function (
+  xAxisPosition,
+  yAxisPosition,
+  sprite,
+  moveSpeed,
+  player,
+  width,
+  height
+) {
+  Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height);
   this.moveSpeed = moveSpeed;
   this.gamer = player;
 };
@@ -133,13 +150,12 @@ Enemy.prototype.render = function () {
 };
 
 Enemy.prototype.checkCollision = function () {
-
   if (
     this.gamer.xAxisPosition < this.xAxisPosition + this.width &&
     this.gamer.width + this.gamer.xAxisPosition > this.xAxisPosition &&
     this.gamer.yAxisPosition < this.yAxisPosition + this.height &&
     this.gamer.yAxisPosition + this.gamer.height > this.yAxisPosition
-  ) {  
+  ) {
     this.gamer.loose();
   }
 };
@@ -147,15 +163,20 @@ Enemy.prototype.checkCollision = function () {
 const allEnemies = giveMeEnemies(3);
 
 function giveMeEnemies(numberOfEnemies) {
-
-  return Array.from(Array(numberOfEnemies).keys()).map((_, i) => {
-
-      const yAxisPosition = Math.round(tileHeight * i + tileHeight * emenyRowsModifier);
-      const moveSpeed = Math.round(baseEnemySpeed * (1 - enemySpeedModifier * [i]))
-      
-      return new Enemy(-entityWidth, yAxisPosition, "images/enemy-bug.png", moveSpeed, player)
-    }
+  return [...Array(numberOfEnemies).keys()].map((_, i) => {
+    const yAxisPosition = tileHeight * i + tileHeight - emenyRowsOffset;
+    const moveSpeed = Math.round(
+      baseEnemySpeed * (1 - enemySpeedModifier * [i])
     );
+
+    return new Enemy(
+      -entityWidth,
+      yAxisPosition,
+      "images/enemy-bug.png",
+      moveSpeed,
+      player
+    );
+  });
 }
 
 document.addEventListener("keyup", function (e) {
