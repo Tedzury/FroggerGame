@@ -6,11 +6,9 @@ const numberOfColumns = 5;
 const fieldWidth = numberOfColumns * tileWidth;
 const fieldHeight = numberOfRows * tileHeight;
 const fieldBottomGap = 100;
-const emenyRowsModifier = 0.66;
-
-const firstEnemyRow = Math.round(tileHeight * emenyRowsModifier);
-const secondEnemyRow = Math.round(tileHeight + tileHeight * emenyRowsModifier);
-const thirdEnemyRow = Math.round(tileHeight * 2 + tileHeight * emenyRowsModifier);
+const emenyRowsModifier = 0.75;   
+const baseEnemySpeed = 180;
+const enemySpeedModifier = 1/6;
 
 const entityWidth = 80;
 const entityHeight = 70;
@@ -24,7 +22,7 @@ const ScoreBoard = function(score, scoreMax) {
   this.scoreMax = scoreMax;
 }
 
-ScoreBoard.prototype.update = function () {
+ScoreBoard.prototype.updateOnWin = function () {
   scoreTitle.textContent = `Current score is: ${(this.score += 1)}`;
 
   if (this.score > this.scoreMax) {
@@ -32,6 +30,11 @@ ScoreBoard.prototype.update = function () {
     maxScoreTitle.textContent = `Your max score is: ${this.scoreMax}`;
   }
 };
+
+ScoreBoard.prototype.updateOnLoose = function() {
+  this.score = 0;
+  scoreTitle.textContent = `Current score is: ${scoreBoard.score}`;
+}
 
 const scoreBoard = new ScoreBoard(0, 0);
 
@@ -44,18 +47,19 @@ const Entity = function (xAxisPosition, yAxisPosition, sprite) {
   this.sprite = sprite;
 }
 
-const Player = function (xAxisPosition, yAxisPosition, sprite, width, height) {
+const Player = function (xAxisPosition, yAxisPosition, sprite, scoreBoard, width, height) {
   Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height)
   this.moveXAxis = tileWidth;
   this.moveYAxis = tileHeight;
+  this.scoreTable = scoreBoard;
 };
 
 Player.prototype = Object.create(Entity.prototype);
 
 Player.prototype.update = function () {
-  if (player.yAxisPosition < 0) {
+  if (this.yAxisPosition < 0) {
     this.respawn();
-    scoreBoard.update();
+    this.scoreTable.updateOnWin();
   }
 };
 
@@ -71,6 +75,11 @@ Player.prototype.respawn = function () {
   this.xAxisPosition = playerStartingPositionX;
   this.yAxisPosition = playerStartingPositionY;
 };
+
+Player.prototype.loose = function () {
+  this.respawn();
+  this.scoreTable.updateOnLoose();
+}
 
 Player.prototype.handleInput = function (key) {
   switch (key) {
@@ -95,12 +104,12 @@ Player.prototype.handleInput = function (key) {
   }
 };
 
-const player = new Player(playerStartingPositionX, playerStartingPositionY, "images/char-boy.png");
+const player = new Player(playerStartingPositionX, playerStartingPositionY, "images/char-boy.png", scoreBoard);
 
-const Enemy = function (xAxisPosition, yAxisPosition, sprite, moveSpeed, width, height, player) {
+const Enemy = function (xAxisPosition, yAxisPosition, sprite, moveSpeed, player, width, height ) {
   Entity.call(this, xAxisPosition, yAxisPosition, sprite, width, height)
   this.moveSpeed = moveSpeed;
-  this.player = player;
+  this.gamer = player;
 };
 
 Enemy.prototype = Object.create(Entity.prototype);
@@ -126,38 +135,28 @@ Enemy.prototype.render = function () {
 Enemy.prototype.checkCollision = function () {
 
   if (
-    player.xAxisPosition < this.xAxisPosition + this.width &&
-    player.width + player.xAxisPosition > this.xAxisPosition &&
-    player.yAxisPosition < this.yAxisPosition + this.height &&
-    player.yAxisPosition + player.height > this.yAxisPosition
-  ) {
-    
-    player.respawn();
-    scoreBoard.score = 0;
-    scoreTitle.textContent = `Current score is: ${scoreBoard.score}`;
+    this.gamer.xAxisPosition < this.xAxisPosition + this.width &&
+    this.gamer.width + this.gamer.xAxisPosition > this.xAxisPosition &&
+    this.gamer.yAxisPosition < this.yAxisPosition + this.height &&
+    this.gamer.yAxisPosition + this.gamer.height > this.yAxisPosition
+  ) {  
+    this.gamer.loose();
   }
 };
 
-const enemyStats = [
-  {
-    yAxisPosition: firstEnemyRow,
-    moveSpeed: 180,
-  },
-  {
-    yAxisPosition: secondEnemyRow,
-    moveSpeed: 150,
-  },
-  {
-    yAxisPosition: thirdEnemyRow,
-    moveSpeed: 120,
-  },
-];
+const allEnemies = giveMeEnemies(3);
 
+function giveMeEnemies(numberOfEnemies) {
 
-const allEnemies = enemyStats.map(
-  ({ yAxisPosition, moveSpeed }) =>
-    new Enemy(-entityWidth, yAxisPosition, "images/enemy-bug.png", moveSpeed)
-);
+  return Array.from(Array(numberOfEnemies).keys()).map((_, i) => {
+
+      const yAxisPosition = Math.round(tileHeight * i + tileHeight * emenyRowsModifier);
+      const moveSpeed = Math.round(baseEnemySpeed * (1 - enemySpeedModifier * [i]))
+      
+      return new Enemy(-entityWidth, yAxisPosition, "images/enemy-bug.png", moveSpeed, player)
+    }
+    );
+}
 
 document.addEventListener("keyup", function (e) {
   var allowedKeys = {
